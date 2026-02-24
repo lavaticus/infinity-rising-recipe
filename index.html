@@ -128,10 +128,6 @@
 		<div class="guild-branding">
 			<div style="display: flex; align-items: center; gap: 20px;">
         
-				<button id="cardanoConnectBtn" class="wallet-btn">
-					Login
-				</button>
-	
 				<a href="https://discord.gg/knights-of-cornucopias" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center;">
 					<img id="discord-icon" src="" alt="Discord" 
 						style="height: 28px; width: auto; opacity: 0.9; vertical-align: middle;">
@@ -259,81 +255,5 @@
     loadWiki(); 
 	
     </script>
-
-	<style>
-		.wallet-btn {
-			display: inline-block;
-			vertical-align: middle;
-			margin-right: 15px; /* Spacing between button and Discord logo */
-			padding: 6px 16px; 
-			background: transparent; 
-			color: #ffffff; 
-			border: 1px solid #4e5cc4;
-			border-radius: 4px; 
-			cursor: pointer; 
-			font-size: 14px;
-			font-weight: 500;
-			font-family: inherit;
-			transition: all 0.2s ease;
-		}
-
-		.wallet-btn:hover {
-			background: rgba(78, 92, 196, 0.2);
-			border-color: #7289da;
-		}
-
-		.wallet-btn.connected {
-			background: rgba(46, 204, 113, 0.1);
-			border: 1px solid #2ecc71; /* Sharp green border */
-			color: #2ecc71; /* Green text for better readability */
-			cursor: default;
-		}
-	</style>
-
-
-<script src="https://unpkg.com"></script>
-<script>
-  window.addEventListener('load', () => {
-    const btn = document.getElementById("cardanoConnectBtn");
-    if (!btn) return;
-
-    btn.addEventListener("click", async () => {
-      if (btn.classList.contains('connected')) return; // Prevent double-triggering
-
-      console.log("Login initiated...");
-      try {
-        if (!window.cardano) {
-          alert("Cardano wallet not found. Please install Nami or Eternl.");
-          return;
-        }
-
-        // Detect wallet (Nami or Eternl preferred)
-        const walletName = window.cardano.nami ? 'nami' : 
-                           window.cardano.eternl ? 'eternl' : null;
-
-        if (!walletName) {
-          alert("Please enable your Cardano wallet extension.");
-          return;
-        }
-
-        // Trigger the wallet popup
-        const wallet = await window.cardano[walletName].enable();
-        
-        if (wallet) {
-          btn.innerHTML = "Connected ✓";
-          btn.classList.add('connected');
-          console.log("Wallet successfully connected.");
-          
-          // Next step: Check for the Policy ID
-        }
-      } catch (err) {
-        console.error("User cancelled the login:", err);
-      }
-    });
-  });
-</script>
-
-
-
 </body>
 </html>
