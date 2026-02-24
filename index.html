@@ -184,7 +184,7 @@
 			<button class="filter-btn" onclick="filterCategory('Medicine', this)">Medicine</button>
 		</div>
         <div id="recipe-view">
-            <h2 id="view-title" style="margin-top: 0; color: #00d4ff;"></h2>
+            <h2 id="view-title" style="margin-top: 0; color: #c9a84c;"></h2>
             <div id="crafting-tree" class="crafting-flow"></div>
         </div>
 
@@ -300,7 +300,7 @@
             card.onclick = () => showCraftingTree(recipe, item);
             
             const imgUrl = `${SB_URL}/storage/v1/object/public/game-assets/${item.image_path}`;
-            card.innerHTML = `<img class="item-img" src="${imgUrl}"><h3 style="color:#00d4ff">${item.name}</h3>`;
+            card.innerHTML = `<img class="item-img" src="${imgUrl}"><h3 style="color:#c9a84c">${item.name}</h3>`;
             
             grid.appendChild(card);
             allRecipeCards.push(card);
