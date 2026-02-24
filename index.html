@@ -185,36 +185,49 @@ async function showCraftingTree(recipe, outputItem) {
 
     const ingredientsNeeded = Object.entries(recipe.ingredients_required);
     
-    // We need the full recipes list to check if an ingredient is craftable
+    // Fetch recipes once to check for sub-recipes
     const { data: allRecipes } = await _supabase.from('recipes').select('*');
 
     ingredientsNeeded.forEach(([slug, qty], index) => {
         const data = ingredientsMaster.find(i => i.slug === slug);
         const img = `${SB_URL}/storage/v1/object/public/game-assets/${data?.image_path}`;
-        const sourceInfo = data?.source || "Unknown Source";
+        
+        // Format source info: Replace newlines or dashes with <br> for readability
+        const sourceInfo = data?.source ? data.source.replace(/-/g, '<br>•').replace(/\n/g, '<br>') : "Unknown Source";
 
-        // CHECK: Does this ingredient have its own recipe?
+        // Check if ingredient is craftable
         const subRecipe = allRecipes.find(r => {
             const product = ingredientsMaster.find(i => i.id === r.output_item_id);
             return product?.slug === slug;
         });
 
-        // Create the card element
         const card = document.createElement('div');
-        card.className = `ingredient-card ${subRecipe ? 'clickable-ingredient' : ''}`;
-        
-        // If it has a recipe, make it look clickable and add the event
-        if (subRecipe) {
-            card.style.cursor = "pointer";
-            card.style.border = "1px solid #00d4ff"; // Highlight craftable items
-            card.onclick = () => showCraftingTree(subRecipe, data);
-        }
+        card.className = 'ingredient-card';
+        // Add a blue border if it's craftable to match your UI style
+        if (subRecipe) card.style.border = "1px solid #c9a84c"; 
 
         card.innerHTML = `
             <img class="item-img" src="${img}">
-            <div style="font-weight: bold;">${qty}x ${data?.name || slug}</div>
-            <div class="source-label">${subRecipe ? '🛠️ Craftable' : sourceInfo}</div>
+            <div style="font-weight: bold; margin-bottom: 5px;">${qty}x ${data?.name || slug}</div>
+            
+            ${subRecipe ? `
+                <div class="craftable-tag" onclick="event.stopPropagation();">
+                    <button class="filter-btn active" style="font-size: 10px; padding: 2px 8px; margin-bottom: 8px;">
+                        🛠️ Craftable
+                    </button>
+                </div>
+            ` : ''}
+
+            <div class="source-label" style="font-size: 0.85em; color: #aaa;">
+                ${sourceInfo}
+            </div>
         `;
+
+        // Make the whole card clickable if it has a recipe
+        if (subRecipe) {
+            card.style.cursor = "pointer";
+            card.onclick = () => showCraftingTree(subRecipe, data);
+        }
 
         tree.appendChild(card);
 
@@ -226,7 +239,7 @@ async function showCraftingTree(recipe, outputItem) {
         }
     });
 
-    // Add the final result card
+    // Final result card remains the same
     const finalImg = `${SB_URL}/storage/v1/object/public/game-assets/${outputItem.image_path}`;
     const resultHtml = `
         <div class="operator">=</div>
@@ -236,10 +249,8 @@ async function showCraftingTree(recipe, outputItem) {
         </div>
     `;
     tree.insertAdjacentHTML('beforeend', resultHtml);
-    
     window.scrollTo({top: 0, behavior: 'smooth'});
 }
-
 
     async function loadWiki() {
         const { data: ingredients } = await _supabase.from('ingredients').select('*');
