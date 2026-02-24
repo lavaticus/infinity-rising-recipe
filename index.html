@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Infinity Rising: Crafting</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; padding: 0; margin: 0; }
+    
+    /* Fixed Header to keep branding visible while scrolling */
+    .header { 
+        position: fixed; /* Keeps header at top */
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000; /* Ensures it stays above recipes */
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        padding: 15px 40px; 
+        background: rgba(17, 17, 17, 0.95); /* Slight transparency for style */
+        border-bottom: 2px solid #00d4ff;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    }
+
+    /* THE FIX: Pushing the content down so it doesn't collide */
+    .container { 
+        padding: 140px 40px 40px 40px; /* Top padding increased to clear header */
+    }
+
+    .game-logo { height: 60px; }
+    
+    .guild-branding { 
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    .guild-logo { 
+        height: 45px; 
+        margin-top: 5px;
+        filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.1));
+    }
+
+    .guild-text { 
+		margin: 0;
+		padding: 0;
+        font-size: 0.65em; 
+        color: #00d4ff; 
+        text-transform: uppercase; 
+        letter-spacing: 2px;
+        font-weight: bold;
+    }
+	
+	.source-label {
+		font-size: 0.65em;
+		color: #00d4ff;
+		background: rgba(0, 212, 255, 0.1);
+		border-radius: 4px;
+		padding: 8px; /* Increased padding for better look with multiple lines */
+		margin-top: 8px;
+		display: inline-block;
+		border: 1px solid rgba(0, 212, 255, 0.3);
+    
+		/* THIS IS THE MAGIC LINE */
+		white-space: pre-line; 
+    
+		text-align: left; /* Aligns the bullet points to the left */
+		max-width: 140px; /* Prevents the box from getting too wide */
+	}
+
+    /* Rest of your recipe styles... */
+    #recipe-view { 
+        display: none; 
+        background: #262626; 
+        border: 2px solid #00d4ff; 
+        padding: 30px; 
+        border-radius: 15px; 
+        margin-bottom: 40px; 
+        text-align: center;
+        animation: fadeIn 0.4s ease-out;
+    }
+	
+	.filter-bar {
+		display: flex;
+		justify-content: center;
+		gap: 10px;
+		margin-bottom: 30px;
+		flex-wrap: wrap;
+	}
+
+	.filter-btn {
+		background: #262626;
+		border: 1px solid #333;
+		color: #888;
+		padding: 8px 20px;
+		border-radius: 20px;
+		cursor: pointer;
+		transition: 0.3s;
+		font-size: 0.9em;
+		text-transform: uppercase;
+		letter-spacing: 1px;
+	}
+
+	.filter-btn:hover { border-color: #00d4ff; color: white; }
+
+	.filter-btn.active {
+		background: #00d4ff;
+		color: #1a1a1a;
+		border-color: #00d4ff;
+		font-weight: bold;
+	}
+
+	.crafting-flow { display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; }
+    .operator { font-size: 24px; color: #00d4ff; font-weight: bold; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+    .card { background: #262626; border: 1px solid #333; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; }
+    .card:hover { border-color: #00d4ff; transform: translateY(-5px); }
+    img.item-img { width: 80px; height: 80px; object-fit: contain; }
+    .ingredient-card { background: #333; padding: 10px; border-radius: 8px; width: 110px; }	
+	
+    </style>
+</head>
+<body>
+
+    <div class="header">
+		<img id="game-logo-img" class="game-logo" src="" alt="Infinity Rising">
+    
+		<div class="guild-branding">
+			<div style="display: flex; align-items: center; gap: 20px;">
+        
+				<button id="cardanoConnectBtn" class="wallet-btn">
+					Login
+				</button>
+	
+				<a href="https://discord.gg/knights-of-cornucopias" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center;">
+					<img id="discord-icon" src="" alt="Discord" 
+						style="height: 28px; width: auto; opacity: 0.9; vertical-align: middle;">
+				</a>
+
+				<div style="height: 30px; width: 1px; background: rgba(0, 212, 255, 0.3);"></div>
+
+				<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+					<span class="guild-text" style="line-height: 1;">Crafting Database By</span>
+					<a href="https://knightsguild.co/" target="_blank" rel="noopener noreferrer" 
+					style="text-decoration: none; display: block; line-height: 0;">
+						<img id="guild-logo-img" class="guild-logo" src="" alt="Knights Guild" 
+							style="height: 48px; object-fit: contain;">
+					</a>
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+    <div class="container">
+		<div class="filter-bar" id="filter-bar">
+			<button class="filter-btn active" onclick="filterCategory('All', this)">All</button>
+			<button class="filter-btn" onclick="filterCategory('Food/Drink', this)">Food/Drink</button>
+			<button class="filter-btn" onclick="filterCategory('Medicine', this)">Medicine</button>
+		</div>
+        <div id="recipe-view">
+            <h2 id="view-title" style="margin-top: 0; color: #00d4ff;"></h2>
+            <div id="crafting-tree" class="crafting-flow"></div>
+        </div>
+
+        <div id="recipe-grid" class="grid"></div>
+    </div>
+
+    <script>
+    const SB_URL = "https://yuxcjrzzjsyzdjrftezb.supabase.co";
+    const SB_KEY = "sb_publishable_lE_J5fElNPX8AU6IvjJBUA_h_Lywrgo";
+    const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+    let ingredientsMaster = [];
+    let allRecipeCards = []; 
+
+    // Branding
+    const assetBaseUrl = `${SB_URL}/storage/v1/object/public/game-assets/website`;
+    document.getElementById('game-logo-img').src = `${assetBaseUrl}/IR_Logo_Main_01.png`;
+    document.getElementById('guild-logo-img').src = `${assetBaseUrl}/knoc-logo-colour.png`;
+    document.getElementById('discord-icon').src = `${assetBaseUrl}/discord-mark-white.webp`;
+
+    async function showCraftingTree(recipe, outputItem) {
+        const view = document.getElementById('recipe-view');
+        const tree = document.getElementById('crafting-tree');
+        document.getElementById('view-title').innerText = outputItem.name;
+        view.style.display = 'block';
+        tree.innerHTML = "";
+
+        const ingredientsNeeded = Object.entries(recipe.ingredients_required);
+        
+        ingredientsNeeded.forEach(([slug, qty], index) => {
+            const data = ingredientsMaster.find(i => i.slug === slug);
+            const img = `${SB_URL}/storage/v1/object/public/game-assets/${data?.image_path}`;
+            const sourceInfo = data?.source || "Unknown Source";
+
+            tree.innerHTML += `
+                <div class="ingredient-card">
+                    <img class="item-img" src="${img}">
+                    <div style="font-weight: bold;">${qty}x ${data?.name || slug}</div>
+                    <div class="source-label">${sourceInfo}</div>
+                </div>
+            `;
+            if (index < ingredientsNeeded.length - 1) tree.innerHTML += '<div class="operator">+</div>';
+        });
+
+        const finalImg = `${SB_URL}/storage/v1/object/public/game-assets/${outputItem.image_path}`;
+        tree.innerHTML += `
+            <div class="operator">=</div>
+            <div class="ingredient-card" style="border: 1px solid #00d4ff;">
+                <img class="item-img" src="${finalImg}">
+                <div>${outputItem.name}</div>
+            </div>
+        `;
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    async function loadWiki() {
+        const { data: ingredients } = await _supabase.from('ingredients').select('*');
+        const { data: recipes } = await _supabase.from('recipes').select('*');
+        ingredientsMaster = ingredients;
+        const grid = document.getElementById('recipe-grid');
+        grid.innerHTML = ""; // Clear grid before loading
+
+        recipes.forEach(recipe => {
+            const item = ingredientsMaster.find(i => i.id === recipe.output_item_id);
+            if (!item) return;
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            // Use 'All' if the category in the database is null or empty
+            card.dataset.category = item.category || 'All'; 
+            card.onclick = () => showCraftingTree(recipe, item);
+            
+            const imgUrl = `${SB_URL}/storage/v1/object/public/game-assets/${item.image_path}`;
+            card.innerHTML = `<img class="item-img" src="${imgUrl}"><h3 style="color:#00d4ff">${item.name}</h3>`;
+            
+            grid.appendChild(card);
+            allRecipeCards.push(card);
+        });
+    }
+
+    function filterCategory(category, btn) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        allRecipeCards.forEach(card => {
+            // Logic: Show if 'All' is selected OR if card matches category exactly
+            if (category === 'All' || card.dataset.category === category) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        document.getElementById('recipe-view').style.display = 'none';
+    }
+
+    // THE VITAL MISSING LINE:
+    loadWiki(); 
+	
+    </script>
+
+	<style>
+		.wallet-btn {
+			display: inline-block;
+			vertical-align: middle;
+			margin-right: 15px; /* Spacing between button and Discord logo */
+			padding: 6px 16px; 
+			background: transparent; 
+			color: #ffffff; 
+			border: 1px solid #4e5cc4;
+			border-radius: 4px; 
+			cursor: pointer; 
+			font-size: 14px;
+			font-weight: 500;
+			font-family: inherit;
+			transition: all 0.2s ease;
+		}
+
+		.wallet-btn:hover {
+			background: rgba(78, 92, 196, 0.2);
+			border-color: #7289da;
+		}
+
+		.wallet-btn.connected {
+			background: rgba(46, 204, 113, 0.1);
+			border: 1px solid #2ecc71; /* Sharp green border */
+			color: #2ecc71; /* Green text for better readability */
+			cursor: default;
+		}
+	</style>
+
+
+<script src="https://unpkg.com"></script>
+<script>
+  window.addEventListener('load', () => {
+    const btn = document.getElementById("cardanoConnectBtn");
+    if (!btn) return;
+
+    btn.addEventListener("click", async () => {
+      if (btn.classList.contains('connected')) return; // Prevent double-triggering
+
+      console.log("Login initiated...");
+      try {
+        if (!window.cardano) {
+          alert("Cardano wallet not found. Please install Nami or Eternl.");
+          return;
+        }
+
+        // Detect wallet (Nami or Eternl preferred)
+        const walletName = window.cardano.nami ? 'nami' : 
+                           window.cardano.eternl ? 'eternl' : null;
+
+        if (!walletName) {
+          alert("Please enable your Cardano wallet extension.");
+          return;
+        }
+
+        // Trigger the wallet popup
+        const wallet = await window.cardano[walletName].enable();
+        
+        if (wallet) {
+          btn.innerHTML = "Connected ✓";
+          btn.classList.add('connected');
+          console.log("Wallet successfully connected.");
+          
+          // Next step: Check for the Policy ID
+        }
+      } catch (err) {
+        console.error("User cancelled the login:", err);
+      }
+    });
+  });
+</script>
+
+
+
+</body>
+</html>
