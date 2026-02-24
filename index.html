@@ -185,17 +185,15 @@ async function showCraftingTree(recipe, outputItem) {
 
     const ingredientsNeeded = Object.entries(recipe.ingredients_required);
     
-    // Fetch recipes once to check for sub-recipes
+    // Check if ingredient is also a product in the recipes table
     const { data: allRecipes } = await _supabase.from('recipes').select('*');
 
     ingredientsNeeded.forEach(([slug, qty], index) => {
         const data = ingredientsMaster.find(i => i.slug === slug);
         const img = `${SB_URL}/storage/v1/object/public/game-assets/${data?.image_path}`;
-        
-        // Format source info: Replace newlines or dashes with <br> for readability
-        const sourceInfo = data?.source ? data.source.replace(/-/g, '<br>•').replace(/\n/g, '<br>') : "Unknown Source";
+        const sourceInfo = data?.source || "Unknown Source";
 
-        // Check if ingredient is craftable
+        // Logic to find if this ingredient has its own recipe
         const subRecipe = allRecipes.find(r => {
             const product = ingredientsMaster.find(i => i.id === r.output_item_id);
             return product?.slug === slug;
@@ -203,29 +201,27 @@ async function showCraftingTree(recipe, outputItem) {
 
         const card = document.createElement('div');
         card.className = 'ingredient-card';
-        // Add a blue border if it's craftable to match your UI style
-        if (subRecipe) card.style.border = "1px solid #c9a84c"; 
-
+        
+        // Restore your original compact HTML structure for the source field
         card.innerHTML = `
             <img class="item-img" src="${img}">
-            <div style="font-weight: bold; margin-bottom: 5px;">${qty}x ${data?.name || slug}</div>
+            <div style="font-weight: bold;">${qty}x ${data?.name || slug}</div>
             
             ${subRecipe ? `
-                <div class="craftable-tag" onclick="event.stopPropagation();">
-                    <button class="filter-btn active" style="font-size: 10px; padding: 2px 8px; margin-bottom: 8px;">
-                        🛠️ Craftable
+                <div style="margin: 5px 0;">
+                    <button class="filter-btn active" style="font-size: 10px; padding: 2px 8px; cursor: pointer;">
+                        🛠️ CRAFTABLE
                     </button>
                 </div>
             ` : ''}
 
-            <div class="source-label" style="font-size: 0.85em; color: #aaa;">
-                ${sourceInfo}
-            </div>
+            <div class="source-label">${sourceInfo}</div>
         `;
 
-        // Make the whole card clickable if it has a recipe
+        // If it's craftable, make the whole card a link to its recipe
         if (subRecipe) {
             card.style.cursor = "pointer";
+            card.style.border = "1px solid #c9a84c"; // Optional: gold border for craftable items
             card.onclick = () => showCraftingTree(subRecipe, data);
         }
 
@@ -239,7 +235,7 @@ async function showCraftingTree(recipe, outputItem) {
         }
     });
 
-    // Final result card remains the same
+    // Final Product Result
     const finalImg = `${SB_URL}/storage/v1/object/public/game-assets/${outputItem.image_path}`;
     const resultHtml = `
         <div class="operator">=</div>
