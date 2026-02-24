@@ -120,7 +120,7 @@
 		background: #1a1a1a;
 		padding: 20px;
 		border-radius: 8px;
-		border: 1px solid #333;
+		border: 0px solid #333;
 	}
 
 	#mermaid-graph {
@@ -190,6 +190,11 @@
 
         <div id="recipe-grid" class="grid"></div>
     </div>
+	
+	<div id="recipe-overview-container">
+		<h2 style="color:#c9a84c; text-align: center;">Crafting Tech Tree</h2>
+		<div id="mermaid-graph" class="mermaid"></div>
+	</div>
 
     <script>
     const SB_URL = "https://yuxcjrzzjsyzdjrftezb.supabase.co";
@@ -324,76 +329,66 @@
     // THE VITAL MISSING LINE:
     loadWiki(); 
 	
-async function generateRecipeTree() {
-    const graphDiv = document.getElementById('mermaid-graph');
-    if (!ingredientsMaster.length || !graphDiv) return;
+	async function generateRecipeTree() {
+		const graphDiv = document.getElementById('mermaid-graph');
+		if (!ingredientsMaster.length || !graphDiv) return;
 
-    // 1. Dynamic import of Mermaid
-    const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+		// 1. Dynamic import of Mermaid
+		const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
 
-    // 2. Initialize with Dark Theme and manual start
-	mermaid.initialize({ 
-		startOnLoad: false, 
-		theme: 'dark',
-		securityLevel: 'loose',
-		flowchart: { 
-			useMaxWidth: false, // Allows our CSS to handle the width/centering
-			htmlLabels: true 
-		}
-	});
+		// 2. Initialize with Dark Theme and manual start
+		mermaid.initialize({ 
+			startOnLoad: false, 
+			theme: 'dark',
+			securityLevel: 'loose',
+			flowchart: { 
+				useMaxWidth: false, // Allows our CSS to handle the width/centering
+				htmlLabels: true 
+			}
+		});
 
 
-    const { data: recipes } = await _supabase.from('recipes').select('*');
-    if (!recipes || recipes.length === 0) return;
+		const { data: recipes } = await _supabase.from('recipes').select('*');
+		if (!recipes || recipes.length === 0) return;
 
-    // 3. Build the graph string with Flowchart syntax (more stable than graph LR)
-    let graphDefinition = "flowchart LR\n";
+		// 3. Build the graph string with Flowchart syntax (more stable than graph LR)
+		let graphDefinition = "flowchart LR\n";
 
-    recipes.forEach(recipe => {
-        const outputItem = ingredientsMaster.find(i => i.id === recipe.output_item_id);
-        if (!outputItem) return;
+		recipes.forEach(recipe => {
+			const outputItem = ingredientsMaster.find(i => i.id === recipe.output_item_id);
+			if (!outputItem) return;
 
-        // Clean names: remove () [] and replace spaces with underscores for ID safety
-        const outID = outputItem.name.replace(/\s+/g, '_').replace(/[()\[\]]/g, '');
-        const outName = outputItem.name.replace(/[()\[\]]/g, '');
+			// Clean names: remove () [] and replace spaces with underscores for ID safety
+			const outID = outputItem.name.replace(/\s+/g, '_').replace(/[()\[\]]/g, '');
+			const outName = outputItem.name.replace(/[()\[\]]/g, '');
 
-        Object.entries(recipe.ingredients_required).forEach(([slug, qty]) => {
-            const ingredientData = ingredientsMaster.find(i => i.slug === slug);
-            const ingName = (ingredientData?.name || slug).replace(/[()\[\]]/g, '');
-            const ingID = ingName.replace(/\s+/g, '_');
+			Object.entries(recipe.ingredients_required).forEach(([slug, qty]) => {
+				const ingredientData = ingredientsMaster.find(i => i.slug === slug);
+				const ingName = (ingredientData?.name || slug).replace(/[()\[\]]/g, '');
+				const ingID = ingName.replace(/\s+/g, '_');
             
-            // Format: ID["Display Name"] -- "Label" --> ID2["Display Name"]
-            graphDefinition += `  ${ingID}["${ingName}"] -- "${qty}x" --> ${outID}["${outName}"]\n`;
-        });
-    });
+				// Format: ID["Display Name"] -- "Label" --> ID2["Display Name"]
+				graphDefinition += `  ${ingID}["${ingName}"] -- "${qty}x" --> ${outID}["${outName}"]\n`;
+			});
+		});
 
-    // 4. Force a clean render
-    try {
-        // Reset the div content with the raw string
-        graphDiv.innerHTML = graphDefinition;
-        graphDiv.removeAttribute('data-processed'); // Crucial: tells mermaid to re-scan this
+		// 4. Force a clean render
+		try {
+			// Reset the div content with the raw string
+			graphDiv.innerHTML = graphDefinition;
+			graphDiv.removeAttribute('data-processed'); // Crucial: tells mermaid to re-scan this
         
-        // Execute the render on this specific node
-        await mermaid.run({
-            nodes: [graphDiv]
-        });
-    } catch (err) {
-        console.error("Mermaid Render Error:", err);
-        graphDiv.innerHTML = `<p style="color:red;">Error rendering tree: ${err.message}</p>`;
-    }
-}
-
-
+			// Execute the render on this specific node
+			await mermaid.run({
+				nodes: [graphDiv]
+			});
+		} catch (err) {
+			console.error("Mermaid Render Error:", err);
+			graphDiv.innerHTML = `<p style="color:red;">Error rendering tree: ${err.message}</p>`;
+		}
+	}
 
     </script>
-	
-
-
-<div id="recipe-overview-container">
-    <h2 style="color:#00d4ff; text-align: center;">Crafting Tech Tree</h2>
-    <div id="mermaid-graph" class="mermaid"></div>
-</div>
-
 
 </body>
 </html>
