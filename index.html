@@ -176,40 +176,70 @@
     document.getElementById('guild-logo-img').src = `${assetBaseUrl}/knoc-logo-colour.png`;
     document.getElementById('discord-icon').src = `${assetBaseUrl}/discord-mark-white.webp`;
 
-    async function showCraftingTree(recipe, outputItem) {
-        const view = document.getElementById('recipe-view');
-        const tree = document.getElementById('crafting-tree');
-        document.getElementById('view-title').innerText = outputItem.name;
-        view.style.display = 'block';
-        tree.innerHTML = "";
+async function showCraftingTree(recipe, outputItem) {
+    const view = document.getElementById('recipe-view');
+    const tree = document.getElementById('crafting-tree');
+    document.getElementById('view-title').innerText = outputItem.name;
+    view.style.display = 'block';
+    tree.innerHTML = "";
 
-        const ingredientsNeeded = Object.entries(recipe.ingredients_required);
-        
-        ingredientsNeeded.forEach(([slug, qty], index) => {
-            const data = ingredientsMaster.find(i => i.slug === slug);
-            const img = `${SB_URL}/storage/v1/object/public/game-assets/${data?.image_path}`;
-            const sourceInfo = data?.source || "Unknown Source";
+    const ingredientsNeeded = Object.entries(recipe.ingredients_required);
+    
+    // We need the full recipes list to check if an ingredient is craftable
+    const { data: allRecipes } = await _supabase.from('recipes').select('*');
 
-            tree.innerHTML += `
-                <div class="ingredient-card">
-                    <img class="item-img" src="${img}">
-                    <div style="font-weight: bold;">${qty}x ${data?.name || slug}</div>
-                    <div class="source-label">${sourceInfo}</div>
-                </div>
-            `;
-            if (index < ingredientsNeeded.length - 1) tree.innerHTML += '<div class="operator">+</div>';
+    ingredientsNeeded.forEach(([slug, qty], index) => {
+        const data = ingredientsMaster.find(i => i.slug === slug);
+        const img = `${SB_URL}/storage/v1/object/public/game-assets/${data?.image_path}`;
+        const sourceInfo = data?.source || "Unknown Source";
+
+        // CHECK: Does this ingredient have its own recipe?
+        const subRecipe = allRecipes.find(r => {
+            const product = ingredientsMaster.find(i => i.id === r.output_item_id);
+            return product?.slug === slug;
         });
 
-        const finalImg = `${SB_URL}/storage/v1/object/public/game-assets/${outputItem.image_path}`;
-        tree.innerHTML += `
-            <div class="operator">=</div>
-            <div class="ingredient-card" style="border: 1px solid #c9a84c;">
-                <img class="item-img" src="${finalImg}">
-                <div>${outputItem.name}</div>
-            </div>
+        // Create the card element
+        const card = document.createElement('div');
+        card.className = `ingredient-card ${subRecipe ? 'clickable-ingredient' : ''}`;
+        
+        // If it has a recipe, make it look clickable and add the event
+        if (subRecipe) {
+            card.style.cursor = "pointer";
+            card.style.border = "1px solid #00d4ff"; // Highlight craftable items
+            card.onclick = () => showCraftingTree(subRecipe, data);
+        }
+
+        card.innerHTML = `
+            <img class="item-img" src="${img}">
+            <div style="font-weight: bold;">${qty}x ${data?.name || slug}</div>
+            <div class="source-label">${subRecipe ? '🛠️ Craftable' : sourceInfo}</div>
         `;
-        window.scrollTo({top: 0, behavior: 'smooth'});
-    }
+
+        tree.appendChild(card);
+
+        if (index < ingredientsNeeded.length - 1) {
+            const op = document.createElement('div');
+            op.className = 'operator';
+            op.innerText = '+';
+            tree.appendChild(op);
+        }
+    });
+
+    // Add the final result card
+    const finalImg = `${SB_URL}/storage/v1/object/public/game-assets/${outputItem.image_path}`;
+    const resultHtml = `
+        <div class="operator">=</div>
+        <div class="ingredient-card" style="border: 1px solid #c9a84c;">
+            <img class="item-img" src="${finalImg}">
+            <div>${outputItem.name}</div>
+        </div>
+    `;
+    tree.insertAdjacentHTML('beforeend', resultHtml);
+    
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
 
     async function loadWiki() {
         const { data: ingredients } = await _supabase.from('ingredients').select('*');
