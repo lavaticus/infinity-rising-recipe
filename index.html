@@ -110,6 +110,19 @@
 		font-weight: bold;
 	}
 
+	/* Styling for your new overview section */
+	#recipe-overview-container {
+		margin-top: 50px;
+		background: #1a1a1a;
+		padding: 20px;
+		border-radius: 8px;
+		border: 1px solid #333;
+		overflow-x: auto; /* Allow scrolling for large trees */
+	}
+	.mermaid {
+		background-color: transparent !important;
+	}
+		
 	.crafting-flow { display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; }
     .operator { font-size: 24px; color: #c9a84c; font-weight: bold; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
@@ -162,6 +175,12 @@
         <div id="recipe-grid" class="grid"></div>
     </div>
 
+	<!-- Load Mermaid from CDN -->
+	<script type="module">
+		import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+		mermaid.initialize({ startOnLoad: false }); // We will trigger it manually
+	</script>
+	
     <script>
     const SB_URL = "https://yuxcjrzzjsyzdjrftezb.supabase.co";
     const SB_KEY = "sb_publishable_lE_J5fElNPX8AU6IvjJBUA_h_Lywrgo";
@@ -176,77 +195,77 @@
     document.getElementById('guild-logo-img').src = `${assetBaseUrl}/knoc-logo-colour.png`;
     document.getElementById('discord-icon').src = `${assetBaseUrl}/discord-mark-white.webp`;
 
-async function showCraftingTree(recipe, outputItem) {
-    const view = document.getElementById('recipe-view');
-    const tree = document.getElementById('crafting-tree');
-    document.getElementById('view-title').innerText = outputItem.name;
-    view.style.display = 'block';
-    tree.innerHTML = "";
+	async function showCraftingTree(recipe, outputItem) {
+		const view = document.getElementById('recipe-view');
+		const tree = document.getElementById('crafting-tree');
+		document.getElementById('view-title').innerText = outputItem.name;
+		view.style.display = 'block';
+		tree.innerHTML = "";
 
-    const ingredientsNeeded = Object.entries(recipe.ingredients_required);
+		const ingredientsNeeded = Object.entries(recipe.ingredients_required);
     
-    // Check if ingredient is also a product in the recipes table
-    const { data: allRecipes } = await _supabase.from('recipes').select('*');
+		// Check if ingredient is also a product in the recipes table
+		const { data: allRecipes } = await _supabase.from('recipes').select('*');
 
-    ingredientsNeeded.forEach(([slug, qty], index) => {
-        const data = ingredientsMaster.find(i => i.slug === slug);
-        const img = `${SB_URL}/storage/v1/object/public/game-assets/${data?.image_path}`;
-        const sourceInfo = data?.source || "Unknown Source";
+		ingredientsNeeded.forEach(([slug, qty], index) => {
+			const data = ingredientsMaster.find(i => i.slug === slug);
+			const img = `${SB_URL}/storage/v1/object/public/game-assets/${data?.image_path}`;
+			const sourceInfo = data?.source || "Unknown Source";
 
-        // Logic to find if this ingredient has its own recipe
-        const subRecipe = allRecipes.find(r => {
-            const product = ingredientsMaster.find(i => i.id === r.output_item_id);
-            return product?.slug === slug;
-        });
-
-        const card = document.createElement('div');
-        card.className = 'ingredient-card';
+			// Logic to find if this ingredient has its own recipe
+			const subRecipe = allRecipes.find(r => {
+				const product = ingredientsMaster.find(i => i.id === r.output_item_id);
+				return product?.slug === slug;
+			});
+	
+			const card = document.createElement('div');
+			card.className = 'ingredient-card';
         
-        // Restore your original compact HTML structure for the source field
-        card.innerHTML = `
-            <img class="item-img" src="${img}">
-            <div style="font-weight: bold;">${qty}x ${data?.name || slug}</div>
+			// Restore your original compact HTML structure for the source field
+			card.innerHTML = `
+				<img class="item-img" src="${img}">
+				<div style="font-weight: bold;">${qty}x ${data?.name || slug}</div>
             
-            ${subRecipe ? `
-                <div style="margin: 5px 0;">
-                    <button class="filter-btn active" style="font-size: 10px; padding: 2px 8px; cursor: pointer;">
-                        🛠️ CRAFTABLE
-                    </button>
-                </div>
-            ` : ''}
+				${subRecipe ? `
+					<div style="margin: 5px 0;">
+						<button class="filter-btn active" style="font-size: 10px; padding: 2px 8px; cursor: pointer;">
+							🛠️ CRAFTABLE
+						</button>
+					</div>
+				` : ''}
 
-            <div class="source-label">${sourceInfo}</div>
-        `;
+				<div class="source-label">${sourceInfo}</div>
+			`;
 
-        // If it's craftable, make the whole card a link to its recipe
-        if (subRecipe) {
-            card.style.cursor = "pointer";
-            card.style.border = "1px solid #c9a84c"; // Optional: gold border for craftable items
-            card.onclick = () => showCraftingTree(subRecipe, data);
-        }
+			// If it's craftable, make the whole card a link to its recipe
+			if (subRecipe) {
+				card.style.cursor = "pointer";
+				card.style.border = "1px solid #c9a84c"; // Optional: gold border for craftable items
+				card.onclick = () => showCraftingTree(subRecipe, data);
+			}
 
-        tree.appendChild(card);
+			tree.appendChild(card);
 
-        if (index < ingredientsNeeded.length - 1) {
-            const op = document.createElement('div');
-            op.className = 'operator';
-            op.innerText = '+';
-            tree.appendChild(op);
-        }
-    });
+			if (index < ingredientsNeeded.length - 1) {
+				const op = document.createElement('div');
+				op.className = 'operator';
+				op.innerText = '+';
+				tree.appendChild(op);
+			}
+		});
 
-    // Final Product Result
-    const finalImg = `${SB_URL}/storage/v1/object/public/game-assets/${outputItem.image_path}`;
-    const resultHtml = `
-        <div class="operator">=</div>
-        <div class="ingredient-card" style="border: 1px solid #c9a84c;">
-            <img class="item-img" src="${finalImg}">
-            <div>${outputItem.name}</div>
-        </div>
-    `;
-    tree.insertAdjacentHTML('beforeend', resultHtml);
-    window.scrollTo({top: 0, behavior: 'smooth'});
-}
+		// Final Product Result
+		const finalImg = `${SB_URL}/storage/v1/object/public/game-assets/${outputItem.image_path}`;
+		const resultHtml = `
+			<div class="operator">=</div>
+			<div class="ingredient-card" style="border: 1px solid #c9a84c;">
+				<img class="item-img" src="${finalImg}">
+				<div>${outputItem.name}</div>
+			</div>
+		`;
+		tree.insertAdjacentHTML('beforeend', resultHtml);
+		window.scrollTo({top: 0, behavior: 'smooth'});
+	}
 
     async function loadWiki() {
         const { data: ingredients } = await _supabase.from('ingredients').select('*');
@@ -271,6 +290,10 @@ async function showCraftingTree(recipe, outputItem) {
             grid.appendChild(card);
             allRecipeCards.push(card);
         });
+
+    // --- ADDED THIS LINE BELOW ---
+    // This triggers the diagram to draw once the data is ready
+    generateRecipeTree(); 
     }
 
     function filterCategory(category, btn) {
@@ -291,6 +314,54 @@ async function showCraftingTree(recipe, outputItem) {
     // THE VITAL MISSING LINE:
     loadWiki(); 
 	
+async function generateRecipeTree() {
+    const graphDiv = document.getElementById('mermaid-graph');
+    if (!ingredientsMaster.length) return; // Wait if data isn't ready
+
+    // 1. Build the graph string
+    let graphDefinition = "graph LR\n";
+    const { data: recipes } = await _supabase.from('recipes').select('*');
+
+    recipes.forEach(recipe => {
+        const outputItem = ingredientsMaster.find(i => i.id === recipe.output_item_id);
+        if (!outputItem) return;
+
+        Object.entries(recipe.ingredients_required).forEach(([slug, qty]) => {
+            const ingredientData = ingredientsMaster.find(i => i.slug === slug);
+            const ingredientName = ingredientData?.name || slug;
+            graphDefinition += `  "${ingredientName}" -- "${qty}x" --> "${outputItem.name}"\n`;
+        });
+    });
+
+    // 2. Render with explicit Dark Theme
+    import('https://cdn.jsdelivr.net').then(async (mermaid) => {
+        mermaid.default.initialize({ 
+            startOnLoad: false, 
+            theme: 'dark', // Forces white text/lines for dark backgrounds
+            securityLevel: 'loose' 
+        });
+        
+        try {
+            const { svg } = await mermaid.default.render('graph-unique-id', graphDefinition);
+            graphDiv.innerHTML = svg;
+        } catch (err) {
+            console.error("Mermaid Render Error:", err);
+            graphDiv.innerHTML = "<p style='color:red;'>Error drawing tech tree. check console.</p>";
+        }
+    });
+}
+
+
+
     </script>
+	
+
+
+<div id="recipe-overview-container">
+    <h2 style="color:#00d4ff; text-align: center;">Crafting Tech Tree</h2>
+    <div id="mermaid-graph" class="mermaid"></div>
+</div>
+
+
 </body>
 </html>
