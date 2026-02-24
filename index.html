@@ -353,7 +353,8 @@
 
 		// 3. Build the graph string with Flowchart syntax (more stable than graph LR)
 		let graphDefinition = "flowchart LR\n";
-
+		graphDefinition += `  classDef goldBorder stroke:#c9a84c,stroke-width:1px;\n`;
+		
 		recipes.forEach(recipe => {
 			const outputItem = ingredientsMaster.find(i => i.id === recipe.output_item_id);
 			if (!outputItem) return;
@@ -368,7 +369,8 @@
 				const ingID = ingName.replace(/\s+/g, '_');
             
 				// Format: ID["Display Name"] -- "Label" --> ID2["Display Name"]
-				graphDefinition += `  ${ingID}["${ingName}"] -- "${qty}x" --> ${outID}["${outName}"]\n`;
+				// Using () creates rounded corners
+				graphDefinition += `  ${ingID}("${ingName}"):::goldBorder -- "${qty}x" --> ${outID}("${outName}"):::goldBorder\n`;
 			});
 		});
 
