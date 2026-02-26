@@ -197,105 +197,119 @@
 	</div>
 
     <script>
-    const SB_URL = "https://yuxcjrzzjsyzdjrftezb.supabase.co";
-    const SB_KEY = "sb_publishable_lE_J5fElNPX8AU6IvjJBUA_h_Lywrgo";
-    const _supabase = supabase.createClient(SB_URL, SB_KEY);
+const SB_URL = "https://yuxcjrzzjsyzdjrftezb.supabase.co";
+const SB_KEY = "sb_publishable_lE_J5fElNPX8AU6IvjJBUA_h_Lywrgo";
+const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-    let ingredientsMaster = [];
-    let allRecipeCards = []; 
+let ingredientsMaster = [];
+let stationsMaster = []; // Added to store stations globally
+let allRecipeCards = []; 
 
-    // Branding
-    const assetBaseUrl = `${SB_URL}/storage/v1/object/public/game-assets/website`;
-    document.getElementById('game-logo-img').src = `${assetBaseUrl}/IR_Logo_Main_01.png`;
-    document.getElementById('guild-logo-img').src = `${assetBaseUrl}/knoc-logo-colour.png`;
-    document.getElementById('discord-icon').src = `${assetBaseUrl}/discord-mark-white.webp`;
+// Branding
+const assetBaseUrl = `${SB_URL}/storage/v1/object/public/game-assets/website`;
+document.getElementById('game-logo-img').src = `${assetBaseUrl}/IR_Logo_Main_01.png`;
+document.getElementById('guild-logo-img').src = `${assetBaseUrl}/knoc-logo-colour.png`;
+document.getElementById('discord-icon').src = `${assetBaseUrl}/discord-mark-white.webp`;
 
-	async function showCraftingTree(recipe, outputItem) {
-		const view = document.getElementById('recipe-view');
-		const tree = document.getElementById('crafting-tree');
-		document.getElementById('view-title').innerText = outputItem.name;
-		view.style.display = 'block';
-		tree.innerHTML = "";
+async function showCraftingTree(recipe, outputItem) {
+    const view = document.getElementById('recipe-view');
+    const tree = document.getElementById('crafting-tree');
+    document.getElementById('view-title').innerText = outputItem.name;
+    view.style.display = 'block';
+    tree.innerHTML = "";
 
-		const ingredientsNeeded = Object.entries(recipe.ingredients_required);
+    const ingredientsNeeded = Object.entries(recipe.ingredients_required);
     
-		// Check if ingredient is also a product in the recipes table
-		const { data: allRecipes } = await _supabase.from('recipes').select('*');
+    const { data: allRecipes } = await _supabase.from('recipes').select('*');
 
-		ingredientsNeeded.forEach(([slug, qty], index) => {
-			const data = ingredientsMaster.find(i => i.slug === slug);
-			const img = `${SB_URL}/storage/v1/object/public/game-assets/${data?.image_path}`;
-			const sourceInfo = data?.source || "Unknown Source";
+    ingredientsNeeded.forEach(([slug, qty], index) => {
+        const data = ingredientsMaster.find(i => i.slug === slug);
+        const img = `${SB_URL}/storage/v1/object/public/game-assets/${data?.image_path}`;
+        const sourceInfo = data?.source || "Unknown Source";
 
-			// Logic to find if this ingredient has its own recipe
-			const subRecipe = allRecipes.find(r => {
-				const product = ingredientsMaster.find(i => i.id === r.output_item_id);
-				return product?.slug === slug;
-			});
-	
-			const card = document.createElement('div');
-			card.className = 'ingredient-card';
+        const subRecipe = allRecipes.find(r => {
+            const product = ingredientsMaster.find(i => i.id === r.output_item_id);
+            return product?.slug === slug;
+        });
+
+        const card = document.createElement('div');
+        card.className = 'ingredient-card';
         
-			// Restore your original compact HTML structure for the source field
-			card.innerHTML = `
-				<img class="item-img" src="${img}">
-				<div style="font-weight: bold;">${qty}x ${data?.name || slug}</div>
+        card.innerHTML = `
+            <img class="item-img" src="${img}">
+            <div style="font-weight: bold;">${qty}x ${data?.name || slug}</div>
             
-				${subRecipe ? `
-					<div style="margin: 5px 0;">
-						<button class="filter-btn active" style="font-size: 10px; padding: 2px 8px; cursor: pointer;">
-							🛠️ CRAFTABLE
-						</button>
-					</div>
-				` : ''}
+            ${subRecipe ? `
+                <div style="margin: 5px 0;">
+                    <button class="filter-btn active" style="font-size: 10px; padding: 2px 8px; cursor: pointer;">
+                        🛠️ CRAFTABLE
+                    </button>
+                </div>
+            ` : ''}
 
-				<div class="source-label">${sourceInfo}</div>
-			`;
+            <div class="source-label">${sourceInfo}</div>
+        `;
 
-			// If it's craftable, make the whole card a link to its recipe
-			if (subRecipe) {
-				card.style.cursor = "pointer";
-				card.style.border = "1px solid #c9a84c"; // Optional: gold border for craftable items
-				card.onclick = () => showCraftingTree(subRecipe, data);
-			}
+        if (subRecipe) {
+            card.style.cursor = "pointer";
+            card.style.border = "1px solid #c9a84c"; 
+            card.onclick = () => showCraftingTree(subRecipe, data);
+        }
 
-			tree.appendChild(card);
+        tree.appendChild(card);
 
-			if (index < ingredientsNeeded.length - 1) {
-				const op = document.createElement('div');
-				op.className = 'operator';
-				op.innerText = '+';
-				tree.appendChild(op);
-			}
-		});
+        if (index < ingredientsNeeded.length - 1) {
+            const op = document.createElement('div');
+            op.className = 'operator';
+            op.innerText = '+';
+            tree.appendChild(op);
+        }
+    });
 
-		// Final Product Result
-		const finalImg = `${SB_URL}/storage/v1/object/public/game-assets/${outputItem.image_path}`;
-		const resultHtml = `
-			<div class="operator">=</div>
-			<div class="ingredient-card" style="border: 1px solid #c9a84c;">
-				<img class="item-img" src="${finalImg}">
-				<div style="font-weight: bold; margin-top: 5px;">${outputItem.name}</div>
-			</div>
-		`;
-		tree.insertAdjacentHTML('beforeend', resultHtml);
-		window.scrollTo({top: 0, behavior: 'smooth'});
-	}
+    // --- STATION LOGIC START ---
+    // Look up the station name using the station_id from the recipe
+    const stationObj = stationsMaster.find(s => s.id === recipe.station_id);
+    const stationName = stationObj ? stationObj.name : "General Crafting";
+    // --- STATION LOGIC END ---
 
-    async function loadWiki() {
-        const { data: ingredients } = await _supabase.from('ingredients').select('*');
-        const { data: recipes } = await _supabase.from('recipes').select('*');
-        ingredientsMaster = ingredients;
-        const grid = document.getElementById('recipe-grid');
-        grid.innerHTML = ""; // Clear grid before loading
+    // Final Product Result
+    const finalImg = `${SB_URL}/storage/v1/object/public/game-assets/${outputItem.image_path}`;
+    const resultHtml = `
+        <div class="operator">=</div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="ingredient-card" style="border: 1px solid #c9a84c;">
+                <img class="item-img" src="${finalImg}">
+                <div style="font-weight: bold; margin-top: 5px;">${outputItem.name}</div>
+            </div>
+            <!-- Added Station Badge below the result -->
+            <div style="margin-top: 10px; font-size: 11px; background: #1a1a1a; padding: 5px 12px; border-radius: 4px; border: 1px solid #444; color: #fff;">
+                <span style="color: #888;">Station:</span> <span style="color: #c9a84c; font-weight: bold;">${stationName}</span>
+            </div>
+        </div>
+    `;
+    tree.insertAdjacentHTML('beforeend', resultHtml);
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
 
+async function loadWiki() {
+    // Added fetch for stations table
+    const { data: ingredients } = await _supabase.from('ingredients').select('*');
+    const { data: recipes } = await _supabase.from('recipes').select('*');
+    const { data: stations } = await _supabase.from('stations').select('*'); 
+
+    ingredientsMaster = ingredients || [];
+    stationsMaster = stations || []; // Save stations to the global variable
+    
+    const grid = document.getElementById('recipe-grid');
+    grid.innerHTML = ""; 
+
+    if (recipes) {
         recipes.forEach(recipe => {
             const item = ingredientsMaster.find(i => i.id === recipe.output_item_id);
             if (!item) return;
 
             const card = document.createElement('div');
             card.className = 'card';
-            // Use 'All' if the category in the database is null or empty
             card.dataset.category = item.category || 'All'; 
             card.onclick = () => showCraftingTree(recipe, item);
             
@@ -305,29 +319,27 @@
             grid.appendChild(card);
             allRecipeCards.push(card);
         });
+    }
 
-    // --- ADDED THIS LINE BELOW ---
-    // This triggers the diagram to draw once the data is ready
     generateRecipeTree(); 
-    }
+}
 
-    function filterCategory(category, btn) {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+function filterCategory(category, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
 
-        allRecipeCards.forEach(card => {
-            // Logic: Show if 'All' is selected OR if card matches category exactly
-            if (category === 'All' || card.dataset.category === category) {
-                card.style.display = 'block';
-            } else {
-                card.style.display = 'none';
-            }
-        });
-        document.getElementById('recipe-view').style.display = 'none';
-    }
+    allRecipeCards.forEach(card => {
+        if (category === 'All' || card.dataset.category === category) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    document.getElementById('recipe-view').style.display = 'none';
+}
 
-    // THE VITAL MISSING LINE:
-    loadWiki(); 
+loadWiki();
+
 	
 	async function generateRecipeTree() {
 		const graphDiv = document.getElementById('mermaid-graph');
