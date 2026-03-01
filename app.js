@@ -6,6 +6,7 @@ let ingredientsMaster = [];
 let stationsMaster = [];
 let recipesMaster = [];
 let allRecipeCards = [];
+let mermaidInstance = null;
 
 const assetBaseUrl = `${SB_URL}/storage/v1/object/public/game-assets/website`;
 document.getElementById('game-logo-img').src = `${assetBaseUrl}/IR_Logo_Main_01.png`;
@@ -14,6 +15,32 @@ document.getElementById('discord-icon').src = `${assetBaseUrl}/discord-mark-whit
 
 function buildImgUrl(imagePath) {
 	return `${SB_URL}/storage/v1/object/public/game-assets/${imagePath}`;
+}
+
+// Recursively collects all edges for a recipe and its sub-recipes into a Set
+function collectRecipeEdges(recipe, edges = new Set()) {
+	const outputItem = ingredientsMaster.find(i => i.id === recipe.output_item_id);
+	if (!outputItem) return edges;
+
+	const outID = outputItem.name.replace(/\s+/g, '_').replace(/[()\[\]]/g, '');
+	const outName = outputItem.name.replace(/[()\[\]]/g, '');
+
+	Object.entries(recipe.ingredients_required).forEach(([slug, qty]) => {
+		const ingredientData = ingredientsMaster.find(i => i.slug === slug);
+		const ingName = (ingredientData?.name || slug).replace(/[()\[\]]/g, '');
+		const ingID = ingName.replace(/\s+/g, '_');
+
+		edges.add(`  ${ingID}("${ingName}"):::goldBorder -- "${qty}x" --> ${outID}("${outName}"):::goldBorder`);
+
+		// If this ingredient is itself craftable, recurse into it
+		const subRecipe = recipesMaster.find(r => {
+			const product = ingredientsMaster.find(i => i.id === r.output_item_id);
+			return product?.slug === slug;
+		});
+		if (subRecipe) collectRecipeEdges(subRecipe, edges);
+	});
+
+	return edges;
 }
 
 async function showCraftingTree(recipe, outputItem) {
@@ -88,6 +115,7 @@ async function showCraftingTree(recipe, outputItem) {
 		</div>
 	`);
 
+	generateRecipeTree(recipe);
 	window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -119,8 +147,6 @@ async function loadWiki() {
 			allRecipeCards.push(card);
 		});
 	}
-
-	generateRecipeTree();
 }
 
 function filterCategory(category, btn) {
@@ -132,47 +158,46 @@ function filterCategory(category, btn) {
 	});
 
 	document.getElementById('recipe-view').style.display = 'none';
+	document.getElementById('recipe-overview-container').style.display = 'none';
 }
 
-async function generateRecipeTree() {
+async function generateRecipeTree(recipe) {
+	const container = document.getElementById('recipe-overview-container');
 	const graphDiv = document.getElementById('mermaid-graph');
-	if (!ingredientsMaster.length || !recipesMaster.length || !graphDiv) return;
 
-	const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+	// Lazy-load and initialise Mermaid only once
+	if (!mermaidInstance) {
+		const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+		mermaid.initialize({
+			startOnLoad: false,
+			theme: 'dark',
+			securityLevel: 'loose',
+			flowchart: {
+				useMaxWidth: false,
+				htmlLabels: true
+			}
+		});
+		mermaidInstance = mermaid;
+	}
 
-	mermaid.initialize({
-		startOnLoad: false,
-		theme: 'dark',
-		securityLevel: 'loose',
-		flowchart: {
-			useMaxWidth: false,
-			htmlLabels: true
-		}
-	});
+	const edges = collectRecipeEdges(recipe);
+	if (edges.size === 0) {
+		container.style.display = 'none';
+		return;
+	}
 
 	let graphDefinition = "flowchart LR\n";
 	graphDefinition += `  classDef goldBorder stroke:#c9a84c,stroke-width:1px;\n`;
-
-	recipesMaster.forEach(recipe => {
-		const outputItem = ingredientsMaster.find(i => i.id === recipe.output_item_id);
-		if (!outputItem) return;
-
-		const outID = outputItem.name.replace(/\s+/g, '_').replace(/[()\[\]]/g, '');
-		const outName = outputItem.name.replace(/[()\[\]]/g, '');
-
-		Object.entries(recipe.ingredients_required).forEach(([slug, qty]) => {
-			const ingredientData = ingredientsMaster.find(i => i.slug === slug);
-			const ingName = (ingredientData?.name || slug).replace(/[()\[\]]/g, '');
-			const ingID = ingName.replace(/\s+/g, '_');
-
-			graphDefinition += `  ${ingID}("${ingName}"):::goldBorder -- "${qty}x" --> ${outID}("${outName}"):::goldBorder\n`;
-		});
-	});
+	graphDefinition += [...edges].join('\n');
 
 	try {
+		container.style.display = 'flex';
 		graphDiv.innerHTML = graphDefinition;
 		graphDiv.removeAttribute('data-processed');
-		await mermaid.run({ nodes: [graphDiv] });
+
+		// Wait for the DOM to settle before rendering, fixes blank render on first click
+		await new Promise(resolve => requestAnimationFrame(resolve));
+		await mermaidInstance.run({ nodes: [graphDiv] });
 	} catch (err) {
 		console.error("Mermaid render error:", err);
 		graphDiv.innerHTML = `<p style="color:red;">Error rendering tree: ${err.message}</p>`;
