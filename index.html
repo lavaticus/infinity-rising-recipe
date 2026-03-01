@@ -1,437 +1,411 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Infinity Rising: Crafting</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; padding: 0; margin: 0; }
-    
-    /* Fixed Header to keep branding visible while scrolling */
-    .header { 
-        position: fixed; /* Keeps header at top */
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 1000; /* Ensures it stays above recipes */
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
-        padding: 15px 40px; 
-        background: rgba(17, 17, 17, 0.95); /* Slight transparency for style */
-        border-bottom: 2px solid #c9a84c;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-    }
+	<title>Infinity Rising: Crafting</title>
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<style>
+		body {
+			font-family: 'Segoe UI', sans-serif;
+			background: #1a1a1a;
+			color: white;
+			padding: 0;
+			margin: 0;
+		}
 
-    /* THE FIX: Pushing the content down so it doesn't collide */
-    .container { 
-        padding: 140px 40px 40px 40px; /* Top padding increased to clear header */
-    }
+		.header {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			z-index: 1000;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 15px 40px;
+			background: rgba(17, 17, 17, 0.95);
+			border-bottom: 2px solid #c9a84c;
+			box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+		}
 
-    .game-logo { height: 60px; }
-    
-    .guild-branding { 
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-    }
+		.container {
+			padding: 140px 40px 40px 40px;
+		}
 
-    .guild-logo { 
-        height: 45px; 
-        margin-top: 5px;
-        filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.1));
-    }
+		.game-logo {
+			height: 60px;
+		}
 
-    .guild-text { 
-		margin: 0;
-		padding: 0;
-        font-size: 0.65em; 
-        color: #c9a84c; 
-        text-transform: uppercase; 
-        letter-spacing: 2px;
-        font-weight: bold;
-    }
-	
-	.source-label {
-		font-size: 0.65em;
-		color: #00d4ff;
-		background: rgba(0, 212, 255, 0.1);
-		border-radius: 4px;
-		padding: 8px; /* Increased padding for better look with multiple lines */
-		margin-top: 8px;
-		display: inline-block;
-		border: 1px solid rgba(0, 212, 255, 0.3);
-    
-		/* THIS IS THE MAGIC LINE */
-		white-space: pre-line; 
-    
-		text-align: left; /* Aligns the bullet points to the left */
-		max-width: 140px; /* Prevents the box from getting too wide */
-	}
+		.guild-logo {
+			height: 48px;
+			object-fit: contain;
+			filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.1));
+		}
 
-    /* Rest of your recipe styles... */
-    #recipe-view { 
-        display: none; 
-        background: #262626; 
-        border: 2px solid #c9a84c; 
-        padding: 30px; 
-        border-radius: 15px; 
-        margin-bottom: 40px; 
-        text-align: center;
-        animation: fadeIn 0.4s ease-out;
-    }
-	
-	.filter-bar {
-		display: flex;
-		justify-content: center;
-		gap: 10px;
-		margin-bottom: 30px;
-		flex-wrap: wrap;
-	}
+		.guild-text {
+			margin: 0;
+			padding: 0;
+			font-size: 0.65em;
+			color: #c9a84c;
+			text-transform: uppercase;
+			letter-spacing: 2px;
+			font-weight: bold;
+			line-height: 1;
+		}
 
-	.filter-btn {
-		background: #262626;
-		border: 1px solid #333;
-		color: #888;
-		padding: 8px 20px;
-		border-radius: 20px;
-		cursor: pointer;
-		transition: 0.3s;
-		font-size: 0.9em;
-		text-transform: uppercase;
-		letter-spacing: 1px;
-	}
+		.source-label {
+			font-size: 0.65em;
+			color: #00d4ff;
+			background: rgba(0, 212, 255, 0.1);
+			border-radius: 4px;
+			padding: 8px;
+			margin-top: 8px;
+			display: inline-block;
+			border: 1px solid rgba(0, 212, 255, 0.3);
+			white-space: pre-line;
+			text-align: left;
+			max-width: 140px;
+		}
 
-	.filter-btn:hover { border-color: #c9a84c; color: white; }
+		@keyframes fadeIn {
+			from { opacity: 0; transform: translateY(-8px); }
+			to   { opacity: 1; transform: translateY(0); }
+		}
 
-	.filter-btn.active {
-		background: #c9a84c;
-		color: #1a1a1a;
-		border-color: #c9a84c;
-		font-weight: bold;
-	}
-	
-	#recipe-overview-container {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		width: 100%;
-		margin-top: 50px;
-		background: #1a1a1a;
-		padding: 20px;
-		border-radius: 8px;
-		border: 0px solid #333;
-	}
+		#recipe-view {
+			display: none;
+			background: #262626;
+			border: 2px solid #c9a84c;
+			padding: 30px;
+			border-radius: 15px;
+			margin-bottom: 40px;
+			text-align: center;
+			animation: fadeIn 0.4s ease-out;
+		}
 
-	#mermaid-graph {
-		width: 100%;
-		display: flex;
-		justify-content: center; /* Centers the SVG inside the div */
-	}
+		.filter-bar {
+			display: flex;
+			justify-content: center;
+			gap: 10px;
+			margin-bottom: 30px;
+			flex-wrap: wrap;
+		}
 
-	/* This forces the SVG to not exceed the screen width while staying centered */
-	#mermaid-graph svg {
-		max-width: 100% !important;
-		height: auto;
-	}
+		.filter-btn {
+			background: #262626;
+			border: 1px solid #333;
+			color: #888;
+			padding: 8px 20px;
+			border-radius: 20px;
+			cursor: pointer;
+			transition: 0.3s;
+			font-size: 0.9em;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+		}
 
-	.mermaid {
-		background-color: transparent !important;
-	}
-		
-	.crafting-flow { display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; }
-    .operator { font-size: 24px; color: #c9a84c; font-weight: bold; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-    .card { background: #262626; border: 1px solid #333; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; }
-    .card:hover { border-color: #c9a84c; transform: translateY(-5px); }
-    img.item-img { width: 80px; height: 80px; object-fit: contain; }
-    .ingredient-card { background: #333; padding: 10px; border-radius: 8px; width: 110px; }	
-	
-    </style>
+		.filter-btn:hover { border-color: #c9a84c; color: white; }
+
+		.filter-btn.active {
+			background: #c9a84c;
+			color: #1a1a1a;
+			border-color: #c9a84c;
+			font-weight: bold;
+		}
+
+		#recipe-overview-container {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			width: 100%;
+			margin-top: 50px;
+			background: #1a1a1a;
+			padding: 20px;
+			border-radius: 8px;
+		}
+
+		#mermaid-graph {
+			width: 100%;
+			display: flex;
+			justify-content: center;
+		}
+
+		#mermaid-graph svg {
+			max-width: 100% !important;
+			height: auto;
+		}
+
+		.mermaid {
+			background-color: transparent !important;
+		}
+
+		.crafting-flow {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			gap: 15px;
+			flex-wrap: wrap;
+		}
+
+		.operator {
+			font-size: 24px;
+			color: #c9a84c;
+			font-weight: bold;
+		}
+
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+			gap: 20px;
+		}
+
+		.card {
+			background: #262626;
+			border: 1px solid #333;
+			border-radius: 12px;
+			padding: 20px;
+			text-align: center;
+			cursor: pointer;
+			transition: 0.3s;
+		}
+
+		.card:hover { border-color: #c9a84c; transform: translateY(-5px); }
+
+		img.item-img { width: 80px; height: 80px; object-fit: contain; }
+
+		.ingredient-card {
+			background: #333;
+			padding: 10px;
+			border-radius: 8px;
+			width: 110px;
+		}
+	</style>
 </head>
 <body>
 
-    <div class="header">
+	<div class="header">
 		<img id="game-logo-img" class="game-logo" src="" alt="Infinity Rising">
-    
-		<div class="guild-branding">
-			<div style="display: flex; align-items: center; gap: 20px;">
-        
-				<a href="https://discord.gg/knights-of-cornucopias" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center;">
-					<img id="discord-icon" src="" alt="Discord" 
-						style="height: 28px; width: auto; opacity: 0.9; vertical-align: middle;">
+
+		<div style="display: flex; align-items: center; gap: 20px;">
+			<a href="https://discord.gg/knights-of-cornucopias" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center;">
+				<img id="discord-icon" src="" alt="Discord" style="height: 28px; width: auto; opacity: 0.9;">
+			</a>
+
+			<div style="height: 30px; width: 1px; background: rgba(0, 212, 255, 0.3);"></div>
+
+			<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+				<span class="guild-text">Crafting Database By</span>
+				<a href="https://knightsguild.co/" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: block; line-height: 0;">
+					<img id="guild-logo-img" class="guild-logo" src="" alt="Knights Guild">
 				</a>
-
-				<div style="height: 30px; width: 1px; background: rgba(0, 212, 255, 0.3);"></div>
-
-				<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
-					<span class="guild-text" style="line-height: 1;">Crafting Database By</span>
-					<a href="https://knightsguild.co/" target="_blank" rel="noopener noreferrer" 
-					style="text-decoration: none; display: block; line-height: 0;">
-						<img id="guild-logo-img" class="guild-logo" src="" alt="Knights Guild" 
-							style="height: 48px; object-fit: contain;">
-					</a>
-				</div>
-
 			</div>
 		</div>
 	</div>
 
-    <div class="container">
+	<div class="container">
 		<div class="filter-bar" id="filter-bar">
 			<button class="filter-btn active" onclick="filterCategory('All', this)">All</button>
 			<button class="filter-btn" onclick="filterCategory('Food/Drink', this)">Food/Drink</button>
 			<button class="filter-btn" onclick="filterCategory('Medicine', this)">Medicine</button>
 		</div>
-        <div id="recipe-view">
-            <h2 id="view-title" style="margin-top: 0; color: #c9a84c;"></h2>
-            <div id="crafting-tree" class="crafting-flow"></div>
-        </div>
 
-        <div id="recipe-grid" class="grid"></div>
-    </div>
-	
+		<div id="recipe-view">
+			<h2 id="view-title" style="margin-top: 0; color: #c9a84c;"></h2>
+			<div id="crafting-tree" class="crafting-flow"></div>
+		</div>
+
+		<div id="recipe-grid" class="grid"></div>
+	</div>
+
 	<div id="recipe-overview-container">
 		<h2 style="color:#c9a84c; text-align: center;">Crafting Tech Tree</h2>
 		<div id="mermaid-graph" class="mermaid"></div>
 	</div>
 
-    <script>
-	const SB_URL = "https://yuxcjrzzjsyzdjrftezb.supabase.co";
-	const SB_KEY = "sb_publishable_lE_J5fElNPX8AU6IvjJBUA_h_Lywrgo";
-	const _supabase = supabase.createClient(SB_URL, SB_KEY);
+	<script>
+		const SB_URL = "https://yuxcjrzzjsyzdjrftezb.supabase.co";
+		const SB_KEY = "sb_publishable_lE_J5fElNPX8AU6IvjJBUA_h_Lywrgo";
+		const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-	let ingredientsMaster = [];
-	let stationsMaster = []; // Added to store stations globally
-	let allRecipeCards = []; 
+		let ingredientsMaster = [];
+		let stationsMaster = [];
+		let recipesMaster = [];
+		let allRecipeCards = [];
 
-	// Branding
-	const assetBaseUrl = `${SB_URL}/storage/v1/object/public/game-assets/website`;
-	document.getElementById('game-logo-img').src = `${assetBaseUrl}/IR_Logo_Main_01.png`;
-	document.getElementById('guild-logo-img').src = `${assetBaseUrl}/knoc-logo-colour.png`;
-	document.getElementById('discord-icon').src = `${assetBaseUrl}/discord-mark-white.webp`;
+		const assetBaseUrl = `${SB_URL}/storage/v1/object/public/game-assets/website`;
+		document.getElementById('game-logo-img').src = `${assetBaseUrl}/IR_Logo_Main_01.png`;
+		document.getElementById('guild-logo-img').src = `${assetBaseUrl}/knoc-logo-colour.png`;
+		document.getElementById('discord-icon').src = `${assetBaseUrl}/discord-mark-white.webp`;
 
-	async function showCraftingTree(recipe, outputItem) {
-		const view = document.getElementById('recipe-view');
-		const tree = document.getElementById('crafting-tree');
-		document.getElementById('view-title').innerText = outputItem.name;
-		view.style.display = 'block';
-		tree.innerHTML = "";
+		function buildImgUrl(imagePath) {
+			return `${SB_URL}/storage/v1/object/public/game-assets/${imagePath}`;
+		}
 
-		const ingredientsNeeded = Object.entries(recipe.ingredients_required);
-    
-		const { data: allRecipes } = await _supabase.from('recipes').select('*');
+		async function showCraftingTree(recipe, outputItem) {
+			const view = document.getElementById('recipe-view');
+			const tree = document.getElementById('crafting-tree');
+			document.getElementById('view-title').innerText = outputItem.name;
+			view.style.display = 'block';
+			tree.innerHTML = "";
 
-		ingredientsNeeded.forEach(([slug, qty], index) => {
-			const data = ingredientsMaster.find(i => i.slug === slug);
-			const img = `${SB_URL}/storage/v1/object/public/game-assets/${data?.image_path}`;
-			const sourceInfo = data?.source || "Unknown Source";
+			const ingredientsNeeded = Object.entries(recipe.ingredients_required);
 
-			const subRecipe = allRecipes.find(r => {
-				const product = ingredientsMaster.find(i => i.id === r.output_item_id);
-				return product?.slug === slug;
-			});
+			ingredientsNeeded.forEach(([slug, qty], index) => {
+				const data = ingredientsMaster.find(i => i.slug === slug);
+				const img = buildImgUrl(data?.image_path);
+				const sourceInfo = data?.source || "Unknown Source";
 
-			const card = document.createElement('div');
-			card.className = 'ingredient-card';
-        
-			card.innerHTML = `
-				<img class="item-img" src="${img}">
-				<div style="font-weight: bold;">${qty}x ${data?.name || slug}</div>
-            
-				${subRecipe ? `
-					<div style="margin: 5px 0;">
-						<button class="filter-btn active" style="font-size: 10px; padding: 2px 8px; cursor: pointer;">
-							🛠️ CRAFTABLE
-						</button>
-					</div>
-				` : ''}
-
-				<div class="source-label">${sourceInfo}</div>
-			`;
-
-			if (subRecipe) {
-				card.style.cursor = "pointer";
-				card.style.border = "1px solid #c9a84c"; 
-				card.onclick = () => showCraftingTree(subRecipe, data);
-			}
-
-			tree.appendChild(card);
-
-			if (index < ingredientsNeeded.length - 1) {
-				const op = document.createElement('div');
-				op.className = 'operator';
-				op.innerText = '+';
-				tree.appendChild(op);
-			}
-		});
-
-		// --- STATION LOGIC START ---
-		const stationObj = stationsMaster.find(s => s.id === recipe.station_id);
-		const stationName = stationObj ? stationObj.name : "General Crafting";
-
-		// 1. Final Product Result (Standard)
-		const finalImg = `${SB_URL}/storage/v1/object/public/game-assets/${outputItem.image_path}`;
-		const resultHtml = `
-			<div class="operator">=</div>
-			<div class="ingredient-card" style="border: 1px solid #c9a84c;">
-				<img class="item-img" src="${finalImg}">
-				<div style="font-weight: bold; margin-top: 5px;">${outputItem.name}</div>
-			</div>
-		`;
-		tree.insertAdjacentHTML('beforeend', resultHtml);
-
-		// 2. Add the station badge at the BOTTOM of the tree
-		const stationFooter = `
-			<div style="
-				width: 100%; 
-				display: flex; 
-				justify-content: center; 
-				margin-top: 10px; 
-			">
-				<div style="
-					background: rgba(20, 20, 20, 0.8);
-					border: 1px solid #333;
-					padding: 6px 16px;
-					display: flex;
-					align-items: center;
-					gap: 8px;
-					border-radius: 2px;
-					">
-					<span style="color: #888; font-size: 14px;">⚒️</span>
-
-					<!-- Grey Label -->
-					<span style="
-						color: #888; 
-						font-weight: bold; 
-						font-size: 14px;
-					">REQUIRED:</span>
-
-					<!-- Gold Value -->
-					<span style="
-						color: #c9a84c; 
-						font-weight: bold; 
-						font-size: 14px;
-					">${stationName}</span>
-				</div>
-			</div>
-		`;
-
-		tree.insertAdjacentHTML('beforeend', stationFooter);
-		window.scrollTo({top: 0, behavior: 'smooth'});
-	}
-
-	async function loadWiki() {
-		// Added fetch for stations table
-		const { data: ingredients } = await _supabase.from('ingredients').select('*');
-		const { data: recipes } = await _supabase.from('recipes').select('*');
-		const { data: stations } = await _supabase.from('stations').select('*'); 
-
-		ingredientsMaster = ingredients || [];
-		stationsMaster = stations || []; // Save stations to the global variable
-    
-		const grid = document.getElementById('recipe-grid');
-		grid.innerHTML = ""; 
-
-		if (recipes) {
-			recipes.forEach(recipe => {
-				const item = ingredientsMaster.find(i => i.id === recipe.output_item_id);
-				if (!item) return;
+				const subRecipe = recipesMaster.find(r => {
+					const product = ingredientsMaster.find(i => i.id === r.output_item_id);
+					return product?.slug === slug;
+				});
 
 				const card = document.createElement('div');
-				card.className = 'card';
-				card.dataset.category = item.category || 'All'; 
-				card.onclick = () => showCraftingTree(recipe, item);
-            
-				const imgUrl = `${SB_URL}/storage/v1/object/public/game-assets/${item.image_path}`;
-				card.innerHTML = `<img class="item-img" src="${imgUrl}"><h3 style="color:#c9a84c">${item.name}</h3>`;
-            
-				grid.appendChild(card);
-				allRecipeCards.push(card);
+				card.className = 'ingredient-card';
+
+				card.innerHTML = `
+					<img class="item-img" src="${img}">
+					<div style="font-weight: bold;">${qty}x ${data?.name || slug}</div>
+					${subRecipe ? `
+						<div style="margin: 5px 0;">
+							<button class="filter-btn active" style="font-size: 10px; padding: 2px 8px; cursor: pointer;">
+								🛠️ CRAFTABLE
+							</button>
+						</div>
+					` : ''}
+					<div class="source-label">${sourceInfo}</div>
+				`;
+
+				if (subRecipe) {
+					card.style.cursor = "pointer";
+					card.style.border = "1px solid #c9a84c";
+					card.onclick = () => showCraftingTree(subRecipe, data);
+				}
+
+				tree.appendChild(card);
+
+				if (index < ingredientsNeeded.length - 1) {
+					const op = document.createElement('div');
+					op.className = 'operator';
+					op.innerText = '+';
+					tree.appendChild(op);
+				}
 			});
+
+			const stationObj = stationsMaster.find(s => s.id === recipe.station_id);
+			const stationName = stationObj ? stationObj.name : "General Crafting";
+
+			tree.insertAdjacentHTML('beforeend', `
+				<div class="operator">=</div>
+				<div class="ingredient-card" style="border: 1px solid #c9a84c;">
+					<img class="item-img" src="${buildImgUrl(outputItem.image_path)}">
+					<div style="font-weight: bold; margin-top: 5px;">${outputItem.name}</div>
+				</div>
+			`);
+
+			tree.insertAdjacentHTML('beforeend', `
+				<div style="width: 100%; display: flex; justify-content: center; margin-top: 10px;">
+					<div style="background: rgba(20,20,20,0.8); border: 1px solid #333; padding: 6px 16px; display: flex; align-items: center; gap: 8px; border-radius: 2px;">
+						<span style="color: #888; font-size: 14px;">⚒️</span>
+						<span style="color: #888; font-weight: bold; font-size: 14px;">REQUIRED:</span>
+						<span style="color: #c9a84c; font-weight: bold; font-size: 14px;">${stationName}</span>
+					</div>
+				</div>
+			`);
+
+			window.scrollTo({ top: 0, behavior: 'smooth' });
 		}
 
-		generateRecipeTree(); 
-	}
+		async function loadWiki() {
+			const [{ data: ingredients }, { data: recipes }, { data: stations }] = await Promise.all([
+				_supabase.from('ingredients').select('*'),
+				_supabase.from('recipes').select('*'),
+				_supabase.from('stations').select('*')
+			]);
 
-	function filterCategory(category, btn) {
-		document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-		btn.classList.add('active');
+			ingredientsMaster = ingredients || [];
+			recipesMaster = recipes || [];
+			stationsMaster = stations || [];
 
-		allRecipeCards.forEach(card => {
-			if (category === 'All' || card.dataset.category === category) {
-				card.style.display = 'block';
-			} else {
-				card.style.display = 'none';
+			const grid = document.getElementById('recipe-grid');
+
+			if (recipesMaster.length) {
+				recipesMaster.forEach(recipe => {
+					const item = ingredientsMaster.find(i => i.id === recipe.output_item_id);
+					if (!item) return;
+
+					const card = document.createElement('div');
+					card.className = 'card';
+					card.dataset.category = item.category || 'All';
+					card.onclick = () => showCraftingTree(recipe, item);
+					card.innerHTML = `<img class="item-img" src="${buildImgUrl(item.image_path)}"><h3 style="color:#c9a84c">${item.name}</h3>`;
+
+					grid.appendChild(card);
+					allRecipeCards.push(card);
+				});
 			}
-		});
-		document.getElementById('recipe-view').style.display = 'none';
-	}
-	
-	loadWiki();
-	
-	async function generateRecipeTree() {
-		const graphDiv = document.getElementById('mermaid-graph');
-		if (!ingredientsMaster.length || !graphDiv) return;
 
-		// 1. Dynamic import of Mermaid
-		const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
-
-		// 2. Initialize with Dark Theme and manual start
-		mermaid.initialize({ 
-			startOnLoad: false, 
-			theme: 'dark',
-			securityLevel: 'loose',
-			flowchart: { 
-				useMaxWidth: false, // Allows our CSS to handle the width/centering
-				htmlLabels: true 
-			}
-		});
-
-
-		const { data: recipes } = await _supabase.from('recipes').select('*');
-		if (!recipes || recipes.length === 0) return;
-
-		// 3. Build the graph string with Flowchart syntax (more stable than graph LR)
-		let graphDefinition = "flowchart LR\n";
-		graphDefinition += `  classDef goldBorder stroke:#c9a84c,stroke-width:1px;\n`;
-		
-		recipes.forEach(recipe => {
-			const outputItem = ingredientsMaster.find(i => i.id === recipe.output_item_id);
-			if (!outputItem) return;
-
-			// Clean names: remove () [] and replace spaces with underscores for ID safety
-			const outID = outputItem.name.replace(/\s+/g, '_').replace(/[()\[\]]/g, '');
-			const outName = outputItem.name.replace(/[()\[\]]/g, '');
-
-			Object.entries(recipe.ingredients_required).forEach(([slug, qty]) => {
-				const ingredientData = ingredientsMaster.find(i => i.slug === slug);
-				const ingName = (ingredientData?.name || slug).replace(/[()\[\]]/g, '');
-				const ingID = ingName.replace(/\s+/g, '_');
-            
-				// Format: ID["Display Name"] -- "Label" --> ID2["Display Name"]
-				// Using () creates rounded corners
-				graphDefinition += `  ${ingID}("${ingName}"):::goldBorder -- "${qty}x" --> ${outID}("${outName}"):::goldBorder\n`;
-			});
-		});
-
-		// 4. Force a clean render
-		try {
-			// Reset the div content with the raw string
-			graphDiv.innerHTML = graphDefinition;
-			graphDiv.removeAttribute('data-processed'); // Crucial: tells mermaid to re-scan this
-        
-			// Execute the render on this specific node
-			await mermaid.run({
-				nodes: [graphDiv]
-			});
-		} catch (err) {
-			console.error("Mermaid Render Error:", err);
-			graphDiv.innerHTML = `<p style="color:red;">Error rendering tree: ${err.message}</p>`;
+			generateRecipeTree();
 		}
-	}
 
-    </script>
+		function filterCategory(category, btn) {
+			document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+			btn.classList.add('active');
+
+			allRecipeCards.forEach(card => {
+				card.style.display = (category === 'All' || card.dataset.category === category) ? 'block' : 'none';
+			});
+
+			document.getElementById('recipe-view').style.display = 'none';
+		}
+
+		async function generateRecipeTree() {
+			const graphDiv = document.getElementById('mermaid-graph');
+			if (!ingredientsMaster.length || !recipesMaster.length || !graphDiv) return;
+
+			const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+
+			mermaid.initialize({
+				startOnLoad: false,
+				theme: 'dark',
+				securityLevel: 'loose',
+				flowchart: {
+					useMaxWidth: false,
+					htmlLabels: true
+				}
+			});
+
+			let graphDefinition = "flowchart LR\n";
+			graphDefinition += `  classDef goldBorder stroke:#c9a84c,stroke-width:1px;\n`;
+
+			recipesMaster.forEach(recipe => {
+				const outputItem = ingredientsMaster.find(i => i.id === recipe.output_item_id);
+				if (!outputItem) return;
+
+				const outID = outputItem.name.replace(/\s+/g, '_').replace(/[()\[\]]/g, '');
+				const outName = outputItem.name.replace(/[()\[\]]/g, '');
+
+				Object.entries(recipe.ingredients_required).forEach(([slug, qty]) => {
+					const ingredientData = ingredientsMaster.find(i => i.slug === slug);
+					const ingName = (ingredientData?.name || slug).replace(/[()\[\]]/g, '');
+					const ingID = ingName.replace(/\s+/g, '_');
+
+					graphDefinition += `  ${ingID}("${ingName}"):::goldBorder -- "${qty}x" --> ${outID}("${outName}"):::goldBorder\n`;
+				});
+			});
+
+			try {
+				graphDiv.innerHTML = graphDefinition;
+				graphDiv.removeAttribute('data-processed');
+				await mermaid.run({ nodes: [graphDiv] });
+			} catch (err) {
+				console.error("Mermaid render error:", err);
+				graphDiv.innerHTML = `<p style="color:red;">Error rendering tree: ${err.message}</p>`;
+			}
+		}
+
+		loadWiki();
+	</script>
 
 </body>
 </html>
