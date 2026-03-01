@@ -27,10 +27,13 @@
 	</div>
 
 	<div class="container">
-		<div class="filter-bar" id="filter-bar">
-			<button class="filter-btn active" onclick="filterCategory('All', this)">All</button>
-			<button class="filter-btn" onclick="filterCategory('Food/Drink', this)">Food/Drink</button>
-			<button class="filter-btn" onclick="filterCategory('Medicine', this)">Medicine</button>
+		<div class="controls">
+			<div class="filter-bar" id="filter-bar">
+				<button class="filter-btn active" onclick="filterCategory('All', this)">All</button>
+				<button class="filter-btn" onclick="filterCategory('Food/Drink', this)">Food/Drink</button>
+				<button class="filter-btn" onclick="filterCategory('Medicine', this)">Medicine</button>
+			</div>
+			<input type="text" id="search-bar" placeholder="🔍  Search recipes...">
 		</div>
 
 		<div id="recipe-view">
@@ -39,6 +42,7 @@
 		</div>
 
 		<div id="recipe-grid" class="grid"></div>
+		<div id="no-results">No recipes found.</div>
 	</div>
 
 	<div id="recipe-overview-container" style="display: none;">

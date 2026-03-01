@@ -7,6 +7,7 @@ let stationsMaster = [];
 let recipesMaster = [];
 let allRecipeCards = [];
 let mermaidInstance = null;
+let activeCategory = 'All';
 
 const assetBaseUrl = `${SB_URL}/storage/v1/object/public/game-assets/website`;
 document.getElementById('game-logo-img').src = `${assetBaseUrl}/IR_Logo_Main_01.png`;
@@ -15,6 +16,36 @@ document.getElementById('discord-icon').src = `${assetBaseUrl}/discord-mark-whit
 
 function buildImgUrl(imagePath) {
 	return `${SB_URL}/storage/v1/object/public/game-assets/${imagePath}`;
+}
+
+// Applies both the active category filter and the current search term together
+function applyFilters() {
+	const query = document.getElementById('search-bar').value.trim().toLowerCase();
+	let visibleCount = 0;
+
+	allRecipeCards.forEach(card => {
+		const matchesCategory = (activeCategory === 'All' || card.dataset.category === activeCategory);
+		const matchesSearch = (query === '' || card.dataset.name.includes(query));
+
+		if (matchesCategory && matchesSearch) {
+			card.style.display = 'block';
+			visibleCount++;
+		} else {
+			card.style.display = 'none';
+		}
+	});
+
+	document.getElementById('no-results').style.display = visibleCount === 0 ? 'block' : 'none';
+}
+
+function filterCategory(category, btn) {
+	activeCategory = category;
+	document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+	btn.classList.add('active');
+	applyFilters();
+
+	document.getElementById('recipe-view').style.display = 'none';
+	document.getElementById('recipe-overview-container').style.display = 'none';
 }
 
 // Recursively collects all edges for a recipe and its sub-recipes into a Set
@@ -140,25 +171,17 @@ async function loadWiki() {
 			const card = document.createElement('div');
 			card.className = 'card';
 			card.dataset.category = item.category || 'All';
+			card.dataset.name = item.name.toLowerCase();
 			card.onclick = () => showCraftingTree(recipe, item);
-			card.innerHTML = `<img class="item-img" src="${buildImgUrl(item.image_path)}"><h3 style="color:#c9a84c">${item.name}</h3>`;
+			card.innerHTML = `<img class="item-img-sm" src="${buildImgUrl(item.image_path)}"><h3>${item.name}</h3>`;
 
 			grid.appendChild(card);
 			allRecipeCards.push(card);
 		});
 	}
-}
 
-function filterCategory(category, btn) {
-	document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-	btn.classList.add('active');
-
-	allRecipeCards.forEach(card => {
-		card.style.display = (category === 'All' || card.dataset.category === category) ? 'block' : 'none';
-	});
-
-	document.getElementById('recipe-view').style.display = 'none';
-	document.getElementById('recipe-overview-container').style.display = 'none';
+	// Wire up live search
+	document.getElementById('search-bar').addEventListener('input', applyFilters);
 }
 
 async function generateRecipeTree(recipe) {
