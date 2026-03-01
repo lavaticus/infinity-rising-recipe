@@ -198,6 +198,10 @@ async function generateRecipeTree(recipe) {
 		// Wait for the DOM to settle before rendering, fixes blank render on first click
 		await new Promise(resolve => requestAnimationFrame(resolve));
 		await mermaidInstance.run({ nodes: [graphDiv] });
+
+		// Remove the hardcoded width Mermaid sets on the SVG, which causes horizontal scrolling
+		const svg = graphDiv.querySelector("svg");
+		if (svg) svg.removeAttribute("width");
 	} catch (err) {
 		console.error("Mermaid render error:", err);
 		graphDiv.innerHTML = `<p style="color:red;">Error rendering tree: ${err.message}</p>`;
