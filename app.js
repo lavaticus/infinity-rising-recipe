@@ -18,60 +18,51 @@ function buildImgUrl(imagePath) {
 	return `${SB_URL}/storage/v1/object/public/game-assets/${imagePath}`;
 }
 
-// Applies both the active category filter and the current search term together
-function applyFilters() {
-	const query = document.getElementById('search-bar').value.trim().toLowerCase();
-	let visibleCount = 0;
+// Global callback for Mermaid node clicks — must be on window so Mermaid can reach it
+window.onMermaidNodeClick = function(nodeID) {
+	const item = ingredientsMaster.find(i =>
+		i.name.replace(/\s+/g, '_').replace(/[()\[\]]/g, '') === nodeID
+	);
+	if (!item) return;
 
-	allRecipeCards.forEach(card => {
-		const matchesCategory = (activeCategory === 'All' || card.dataset.category === activeCategory);
-		const matchesSearch = (query === '' || card.dataset.name.includes(query));
+	const recipe = recipesMaster.find(r => r.output_item_id === item.id);
+	if (!recipe) return;
 
-		if (matchesCategory && matchesSearch) {
-			card.style.display = 'block';
-			visibleCount++;
-		} else {
-			card.style.display = 'none';
-		}
-	});
+	showCraftingTree(recipe, item);
+};
 
-	document.getElementById('no-results').style.display = visibleCount === 0 ? 'block' : 'none';
-}
-
-function filterCategory(category, btn) {
-	activeCategory = category;
-	document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-	btn.classList.add('active');
-	applyFilters();
-
-	document.getElementById('recipe-view').style.display = 'none';
-	document.getElementById('recipe-overview-container').style.display = 'none';
-}
-
-// Recursively collects all edges for a recipe and its sub-recipes into a Set
-function collectRecipeEdges(recipe, edges = new Set()) {
+// Recursively collects all edges and node metadata for a recipe and its sub-recipes
+function collectRecipeEdges(recipe, edges = new Set(), craftableNodes = new Set(), allNodes = new Set()) {
 	const outputItem = ingredientsMaster.find(i => i.id === recipe.output_item_id);
-	if (!outputItem) return edges;
+	if (!outputItem) return { edges, craftableNodes, allNodes };
 
 	const outID = outputItem.name.replace(/\s+/g, '_').replace(/[()\[\]]/g, '');
 	const outName = outputItem.name.replace(/[()\[\]]/g, '');
+
+	// The output of any recipe is always craftable
+	craftableNodes.add(outID);
+	allNodes.add(JSON.stringify({ id: outID, name: outName }));
 
 	Object.entries(recipe.ingredients_required).forEach(([slug, qty]) => {
 		const ingredientData = ingredientsMaster.find(i => i.slug === slug);
 		const ingName = (ingredientData?.name || slug).replace(/[()\[\]]/g, '');
 		const ingID = ingName.replace(/\s+/g, '_');
 
-		edges.add(`  ${ingID}("${ingName}"):::goldBorder -- "${qty}x" --> ${outID}("${outName}"):::goldBorder`);
+		allNodes.add(JSON.stringify({ id: ingID, name: ingName }));
+		edges.add(`  ${ingID} -- "${qty}x" --> ${outID}`);
 
-		// If this ingredient is itself craftable, recurse into it
+		// If this ingredient is itself craftable, recurse and mark it
 		const subRecipe = recipesMaster.find(r => {
 			const product = ingredientsMaster.find(i => i.id === r.output_item_id);
 			return product?.slug === slug;
 		});
-		if (subRecipe) collectRecipeEdges(subRecipe, edges);
+		if (subRecipe) {
+			craftableNodes.add(ingID);
+			collectRecipeEdges(subRecipe, edges, craftableNodes, allNodes);
+		}
 	});
 
-	return edges;
+	return { edges, craftableNodes, allNodes };
 }
 
 async function showCraftingTree(recipe, outputItem) {
@@ -184,6 +175,36 @@ async function loadWiki() {
 	document.getElementById('search-bar').addEventListener('input', applyFilters);
 }
 
+// Applies both the active category filter and the current search term together
+function applyFilters() {
+	const query = document.getElementById('search-bar').value.trim().toLowerCase();
+	let visibleCount = 0;
+
+	allRecipeCards.forEach(card => {
+		const matchesCategory = (activeCategory === 'All' || card.dataset.category === activeCategory);
+		const matchesSearch = (query === '' || card.dataset.name.includes(query));
+
+		if (matchesCategory && matchesSearch) {
+			card.style.display = 'block';
+			visibleCount++;
+		} else {
+			card.style.display = 'none';
+		}
+	});
+
+	document.getElementById('no-results').style.display = visibleCount === 0 ? 'block' : 'none';
+}
+
+function filterCategory(category, btn) {
+	activeCategory = category;
+	document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+	btn.classList.add('active');
+	applyFilters();
+
+	document.getElementById('recipe-view').style.display = 'none';
+	document.getElementById('recipe-overview-container').style.display = 'none';
+}
+
 async function generateRecipeTree(recipe) {
 	const container = document.getElementById('recipe-overview-container');
 	const graphDiv = document.getElementById('mermaid-graph');
@@ -203,15 +224,33 @@ async function generateRecipeTree(recipe) {
 		mermaidInstance = mermaid;
 	}
 
-	const edges = collectRecipeEdges(recipe);
+	const { edges, craftableNodes, allNodes } = collectRecipeEdges(recipe);
 	if (edges.size === 0) {
 		container.style.display = 'none';
 		return;
 	}
 
-	let graphDefinition = "flowchart LR\n";
-	graphDefinition += `  classDef goldBorder stroke:#c9a84c,stroke-width:1px;\n`;
-	graphDefinition += [...edges].join('\n');
+	let graphDefinition = "%%{init: {'theme': 'dark', 'themeVariables': {'edgeLabelBackground': '#1a1a1a', 'clusterBkg': '#1a1a1a'}}}%%\nflowchart LR\n";
+
+	// Craftable nodes: dark background, gold border and text, clickable
+	graphDefinition += `  classDef craftable fill:#1a1a1a,stroke:#c9a84c,stroke-width:2px,color:#c9a84c,cursor:pointer;\n`;
+	// Raw ingredients: muted grey, not interactive
+	graphDefinition += `  classDef raw fill:#2a2a2a,stroke:#555,stroke-width:1px,color:#fff;\n`;
+
+	// Declare all nodes explicitly with their correct class
+	allNodes.forEach(nodeJson => {
+		const { id, name } = JSON.parse(nodeJson);
+		const cls = craftableNodes.has(id) ? 'craftable' : 'raw';
+		graphDefinition += `  ${id}("${name}"):::${cls}\n`;
+	});
+
+	// Add edges
+	graphDefinition += [...edges].join('\n') + '\n';
+
+	// Add click handlers for craftable nodes
+	craftableNodes.forEach(nodeID => {
+		graphDefinition += `  click ${nodeID} onMermaidNodeClick\n`;
+	});
 
 	try {
 		container.style.display = 'flex';
@@ -225,6 +264,20 @@ async function generateRecipeTree(recipe) {
 		// Remove the hardcoded width Mermaid sets on the SVG, which causes horizontal scrolling
 		const svg = graphDiv.querySelector("svg");
 		if (svg) svg.removeAttribute("width");
+
+		// Style edge labels after Mermaid renders
+		setTimeout(() => {
+			// Make the foreignObject bigger so text isn't clipped
+			graphDiv.querySelectorAll("g.edgeLabel foreignObject").forEach(el => {
+				el.setAttribute('width', '60');
+				el.setAttribute('height', '30');
+			});
+			// Color the text gold and bold
+			graphDiv.querySelectorAll("g.edgeLabel foreignObject div").forEach(el => {
+				el.style.color = '#c9a84c';
+				el.style.fontWeight = 'bold';
+			});
+		}, 100);
 	} catch (err) {
 		console.error("Mermaid render error:", err);
 		graphDiv.innerHTML = `<p style="color:red;">Error rendering tree: ${err.message}</p>`;

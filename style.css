@@ -228,3 +228,8 @@ img.item-img-sm { width: 48px; height: 48px; object-fit: contain; }
 .mermaid {
 	background-color: transparent !important;
 }
+
+#mermaid-graph .edgeLabel p {
+	color: #fff !important;
+	background: transparent !important;
+}
