@@ -9,6 +9,12 @@ let allRecipeCards = [];
 let mermaidInstance = null;
 let activeCategory = 'All';
 
+// Hide the header when embedded in an iframe (e.g. knightstower.fyi)
+if (window.self !== window.top) {
+	document.querySelector('.header').style.display = 'none';
+	document.querySelector('.container').style.paddingTop = '40px';
+}
+
 const assetBaseUrl = `${SB_URL}/storage/v1/object/public/game-assets/website`;
 document.getElementById('game-logo-img').src = `${assetBaseUrl}/IR_Logo_Main_01.png`;
 document.getElementById('guild-logo-img').src = `${assetBaseUrl}/knoc-logo-colour.png`;
