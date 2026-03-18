@@ -31,7 +31,7 @@ window.onMermaidNodeClick = function(nodeID) {
 	);
 	if (!item) return;
 
-	const recipe = recipesMaster.find(r => r.output_item_slug === item.slug);
+	const recipe = recipesMaster.find(r => r.output_item_id === item.id);
 	if (!recipe) return;
 
 	showCraftingTree(recipe, item);
@@ -39,7 +39,7 @@ window.onMermaidNodeClick = function(nodeID) {
 
 // Recursively collects all edges and node metadata for a recipe and its sub-recipes
 function collectRecipeEdges(recipe, edges = new Set(), craftableNodes = new Set(), allNodes = new Set()) {
-	const outputItem = ingredientsMaster.find(i => i.slug === recipe.output_item_slug);
+	const outputItem = ingredientsMaster.find(i => i.id === recipe.output_item_id);
 	if (!outputItem) return { edges, craftableNodes, allNodes };
 
 	const outID = outputItem.name.replace(/\s+/g, '_').replace(/[()\[\]]/g, '');
@@ -58,7 +58,10 @@ function collectRecipeEdges(recipe, edges = new Set(), craftableNodes = new Set(
 		edges.add(`  ${ingID} -- "${qty}x" --> ${outID}`);
 
 		// If this ingredient is itself craftable, recurse and mark it
-		const subRecipe = recipesMaster.find(r => r.output_item_slug === slug);
+		const subRecipe = recipesMaster.find(r => {
+			const product = ingredientsMaster.find(i => i.id === r.output_item_id);
+			return product?.slug === slug;
+		});
 		if (subRecipe) {
 			craftableNodes.add(ingID);
 			collectRecipeEdges(subRecipe, edges, craftableNodes, allNodes);
@@ -82,7 +85,10 @@ async function showCraftingTree(recipe, outputItem) {
 		const img = buildImgUrl(data?.image_path);
 		const sourceInfo = data?.source || "Unknown Source";
 
-		const subRecipe = recipesMaster.find(r => r.output_item_slug === slug);
+		const subRecipe = recipesMaster.find(r => {
+			const product = ingredientsMaster.find(i => i.id === r.output_item_id);
+			return product?.slug === slug;
+		});
 
 		const card = document.createElement('div');
 		card.className = 'ingredient-card';
@@ -116,7 +122,7 @@ async function showCraftingTree(recipe, outputItem) {
 		}
 	});
 
-	const stationObj = stationsMaster.find(s => s.id === recipe.station_id);
+	const stationObj = stationsMaster.find(s => s.slug === recipe.station_slug);
 	const stationName = stationObj ? stationObj.name : "General Crafting";
 
 	tree.insertAdjacentHTML('beforeend', `
@@ -156,7 +162,7 @@ async function loadWiki() {
 
 	if (recipesMaster.length) {
 		recipesMaster.forEach(recipe => {
-			const item = ingredientsMaster.find(i => i.slug === recipe.output_item_slug);
+			const item = ingredientsMaster.find(i => i.id === recipe.output_item_id);
 			if (!item) return;
 
 			const card = document.createElement('div');
